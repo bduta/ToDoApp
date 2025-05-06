@@ -26,7 +26,8 @@ func createTheToDoListFileIfNeeded() (bool, error) {
 	creationRequired := false
 	_, err := os.Stat(toDoListFileName)
 	if os.IsNotExist(err) {
-		_, err := os.Create(toDoListFileName)
+		f, err := os.Create(toDoListFileName)
+		defer f.Close()
 		creationRequired = true
 		if err != nil {
 			return true, errors.New("file does not exist and could not be created")

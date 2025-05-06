@@ -7,7 +7,6 @@ import (
 	"log"
 	"os"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -107,11 +106,14 @@ func getIndexBasedOnId(toDos []toDoItem, id string) (index int, err error) {
 		return -1, errors.New("Id could not be converted to int: " + id)
 	}
 
-	flagIdIndex := sort.Search(len(toDos), func(i int) bool {
-		return toDos[i].id == flagId
-	})
+	flagIdIndex := -1
+	for index, item := range toDos {
+		if item.id == flagId {
+			flagIdIndex = index
+		}
+	}
 
-	if flagIdIndex == len(toDos) {
+	if flagIdIndex == -1 {
 		return -1, errors.New("flag Id could not be found")
 	}
 

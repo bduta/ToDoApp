@@ -2,25 +2,23 @@ package engine
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"slices"
 	"strconv"
 	"strings"
+	"todoapp/models"
 )
 
+type engine struct{}
+
+func NewEngine() *engine {
+	return &engine{}
+}
+
 var toDoListFileName string = "ToDoList.txt"
-
-type toDoItem struct {
-	id          int
-	name        string
-	description string
-}
-
-func (item toDoItem) toFileFormat() string {
-	return fmt.Sprintf("%d,%s,%s\n", item.id, item.name, item.description)
-}
 
 func createTheToDoListFileIfNeeded() (bool, error) {
 	creationRequired := false
@@ -36,46 +34,46 @@ func createTheToDoListFileIfNeeded() (bool, error) {
 	return creationRequired, nil
 }
 
-func readExistingList() (list []toDoItem, err error) {
+func readExistingList() (list []models.ToDoItem, err error) {
 
 	_, fileErr := os.Stat(toDoListFileName)
 	if os.IsNotExist(fileErr) {
-		return []toDoItem{}, errors.New("ToDo file does not exist")
+		return []models.ToDoItem{}, errors.New("ToDo file does not exist")
 	}
 
 	file, fileErr := os.Open(toDoListFileName)
 	if fileErr != nil {
-		return []toDoItem{}, errors.New("file could not be opened")
+		return []models.ToDoItem{}, errors.New("file could not be opened")
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 	scanner.Split(bufio.ScanLines)
-	var toDos []toDoItem
+	var toDos []models.ToDoItem
 	for scanner.Scan() {
 
 		line := strings.TrimSpace(scanner.Text())
 
 		parts := strings.Split(line, ",")
 		if len(parts) != 3 {
-			return []toDoItem{}, errors.New("Line has incorrect format: " + scanner.Text())
+			return []models.ToDoItem{}, errors.New("Line has incorrect format: " + scanner.Text())
 		}
 
 		toDoId, err := strconv.Atoi(parts[0])
 		if err != nil {
-			return []toDoItem{}, errors.New("Id could not be converted to int: " + scanner.Text())
+			return []models.ToDoItem{}, errors.New("Id could not be converted to int: " + scanner.Text())
 		}
 
-		toDo := toDoItem{
-			id:          toDoId,
-			name:        parts[1],
-			description: parts[2],
+		toDo := models.ToDoItem{
+			Id:          toDoId,
+			Name:        parts[1],
+			Description: parts[2],
 		}
 		toDos = append(toDos, toDo)
 	}
 
-	slices.SortFunc(toDos, func(i, j toDoItem) int {
-		return i.id - j.id
+	slices.SortFunc(toDos, func(i, j models.ToDoItem) int {
+		return i.Id - j.Id
 	})
 
 	return toDos, nil
@@ -90,7 +88,7 @@ func generateItemId(fileCreationRequired bool) (id int, err error) {
 
 		if len(toDos) > 0 {
 			lastToDo := toDos[len(toDos)-1]
-			return lastToDo.id + 1, nil
+			return lastToDo.Id + 1, nil
 		} else {
 			return 1, nil
 		}
@@ -100,15 +98,11 @@ func generateItemId(fileCreationRequired bool) (id int, err error) {
 	}
 }
 
-func getIndexBasedOnId(toDos []toDoItem, id string) (index int, err error) {
-	flagId, err := strconv.Atoi(id)
-	if err != nil {
-		return -1, errors.New("Id could not be converted to int: " + id)
-	}
+func getIndexBasedOnId(toDos []models.ToDoItem, id int) (index int, err error) {
 
 	flagIdIndex := -1
 	for index, item := range toDos {
-		if item.id == flagId {
+		if item.Id == id {
 			flagIdIndex = index
 		}
 	}
@@ -120,7 +114,7 @@ func getIndexBasedOnId(toDos []toDoItem, id string) (index int, err error) {
 	return flagIdIndex, nil
 }
 
-func writeItemToFile(item toDoItem) error {
+func writeItemToFile(item models.ToDoItem) error {
 
 	_, err := os.Stat(toDoListFileName)
 	if errors.Is(err, os.ErrNotExist) {
@@ -134,15 +128,15 @@ func writeItemToFile(item toDoItem) error {
 			return errors.New("could not open the ToDoList file")
 		}
 
-		if _, err := f.WriteString(item.toFileFormat()); err != nil {
-			return errors.New("could not append the new toDo item to the ToDoList file: " + item.toFileFormat())
+		if _, err := f.WriteString(item.ToFileFormat()); err != nil {
+			return errors.New("could not append the new toDo item to the ToDoList file: " + item.ToFileFormat())
 		}
 	}
 
 	return nil
 }
 
-func writeItemsToFile(items []toDoItem) error {
+func writeItemsToFile(items []models.ToDoItem) error {
 	f, err := os.Create(toDoListFileName)
 	if err != nil {
 		return errors.New("could not open the ToDoList file")
@@ -150,15 +144,15 @@ func writeItemsToFile(items []toDoItem) error {
 	defer f.Close()
 
 	for _, item := range items {
-		if _, err := f.WriteString(item.toFileFormat()); err != nil {
-			return errors.New("could not append the toDo item to the ToDoList file: " + item.toFileFormat())
+		if _, err := f.WriteString(item.ToFileFormat()); err != nil {
+			return errors.New("could not append the toDo item to the ToDoList file: " + item.ToFileFormat())
 		}
 	}
 
 	return nil
 }
 
-func ExecuteCommand(arguments []string) error {
+func (e *engine) ExecuteCommand(arguments []string) error {
 	if len(arguments) == 0 {
 		toDos, err := readExistingList()
 		if err != nil {
@@ -166,7 +160,7 @@ func ExecuteCommand(arguments []string) error {
 		}
 
 		for _, item := range toDos {
-			fmt.Printf("Id:%d, ToDo:%s, Description:%s\n", item.id, item.name, item.description)
+			fmt.Printf("Id:%d, ToDo:%s, Description:%s\n", item.Id, item.Name, item.Description)
 		}
 
 		return nil
@@ -176,75 +170,49 @@ func ExecuteCommand(arguments []string) error {
 	switch strings.ToLower(flag) {
 	case "-a":
 		if len(arguments) != 3 {
-			fmt.Println("Incorrect number of arguments. The format to add a flag is: -a FlagName FlagDescription")
-			break
+			return errors.New("Incorrect number of arguments. The format to add a flag is: -a FlagName FlagDescription")
 		}
 
-		fileCreationRequired, err := createTheToDoListFileIfNeeded()
+		err := e.CreateItem(arguments[1], arguments[2])
 		if err != nil {
-			return errors.New("Error creating ToDo list file: " + err.Error())
+			return errors.New("Error creating item: " + err.Error())
 		}
 
-		newItem := toDoItem{
-			name:        arguments[1],
-			description: arguments[2],
-		}
-
-		id, err := generateItemId(fileCreationRequired)
-		if err != nil {
-			return errors.New("Error generating item ID: " + err.Error())
-		}
-		newItem.id = id
-
-		writeItemError := writeItemToFile(newItem)
-		if writeItemError != nil {
-			return errors.New("Error writing item to file: " + writeItemError.Error())
-		}
+		fmt.Println("Item added successfully")
 	case "-u":
 		if len(arguments) != 3 {
-			fmt.Println("Incorrect number of arguments. The format to update a flag is: -u FlagId FlagDescription")
-			break
+			return errors.New("Incorrect number of arguments. The format to update a flag is: -u FlagId FlagDescription")
 		}
 
-		toDos, err := readExistingList()
+		flagId, err := strconv.Atoi(arguments[1])
 		if err != nil {
-			return errors.New("Error reading existing list: " + err.Error())
+			return errors.New("Id could not be converted to int: " + arguments[1])
 		}
 
-		index, err := getIndexBasedOnId(toDos, arguments[1])
+		err = e.UpdateItem(flagId, arguments[2])
 		if err != nil {
-			return errors.New("Error finding item by ID: " + err.Error())
+			return errors.New("Error updating item: " + err.Error())
 		}
 
-		toDos[index].description = arguments[2]
-
-		overwritingFileErr := writeItemsToFile(toDos)
-		if overwritingFileErr != nil {
-			return errors.New("Error overwriting file: " + overwritingFileErr.Error())
-		}
+		fmt.Println("Item updated successfully")
 
 	case "-d":
 		if len(arguments) != 2 {
-			fmt.Println("Incorrect number of arguments. The format to delete a flag is: -d FlagId")
-			break
+			return errors.New("Incorrect number of arguments. The format to delete a flag is: -d FlagId")
 		}
 
-		toDos, err := readExistingList()
+		flagId, err := strconv.Atoi(arguments[1])
 		if err != nil {
-			return errors.New("Error reading existing list: " + err.Error())
+			return errors.New("Id could not be converted to int: " + arguments[1])
 		}
 
-		index, err := getIndexBasedOnId(toDos, arguments[1])
+		err = e.DeleteItem(flagId)
 		if err != nil {
-			return errors.New("Error finding item by ID: " + err.Error())
+			return errors.New("Error deleting item: " + err.Error())
 		}
 
-		toDos = append(toDos[:index], toDos[index+1:]...)
+		fmt.Println("Item deleted successfully")
 
-		overwritingFileErr := writeItemsToFile(toDos)
-		if overwritingFileErr != nil {
-			return errors.New("Error overwriting file: " + overwritingFileErr.Error())
-		}
 	default:
 		fmt.Println("The flag entered is not valid.")
 		fmt.Println("To add a flag: -a FlagName FlagDescription")
@@ -252,4 +220,88 @@ func ExecuteCommand(arguments []string) error {
 		fmt.Println("To delete a flag: -d FlagId")
 	}
 	return nil
+}
+
+func (e *engine) GetItems() ([]byte, error) {
+	toDos, err := readExistingList()
+	if err != nil {
+		return nil, errors.New("Error reading existing list: " + err.Error())
+	}
+	toDosString := convertToDosToJson(toDos)
+	return toDosString, nil
+}
+
+func (e *engine) CreateItem(name string, description string) error {
+	fileCreationRequired, err := createTheToDoListFileIfNeeded()
+	if err != nil {
+		return errors.New("Error creating ToDo list file: " + err.Error())
+	}
+
+	newItem := models.ToDoItem{
+		Name:        name,
+		Description: description,
+	}
+
+	id, err := generateItemId(fileCreationRequired)
+	if err != nil {
+		return errors.New("Error generating item ID: " + err.Error())
+	}
+	newItem.Id = id
+
+	writeItemError := writeItemToFile(newItem)
+	if writeItemError != nil {
+		return errors.New("Error writing item to file: " + writeItemError.Error())
+	}
+
+	return nil
+}
+
+func (e *engine) UpdateItem(id int, description string) error {
+	toDos, err := readExistingList()
+	if err != nil {
+		return errors.New("Error reading existing list: " + err.Error())
+	}
+
+	index, err := getIndexBasedOnId(toDos, id)
+	if err != nil {
+		return errors.New("Error finding item by ID: " + err.Error())
+	}
+
+	toDos[index].Description = description
+
+	overwritingFileErr := writeItemsToFile(toDos)
+	if overwritingFileErr != nil {
+		return errors.New("Error overwriting file: " + overwritingFileErr.Error())
+	}
+
+	return nil
+}
+
+func (e *engine) DeleteItem(id int) error {
+	toDos, err := readExistingList()
+	if err != nil {
+		return errors.New("Error reading existing list: " + err.Error())
+	}
+
+	index, err := getIndexBasedOnId(toDos, id)
+	if err != nil {
+		return errors.New("Error finding item by ID: " + err.Error())
+	}
+
+	toDos = append(toDos[:index], toDos[index+1:]...)
+
+	overwritingFileErr := writeItemsToFile(toDos)
+	if overwritingFileErr != nil {
+		return errors.New("Error overwriting file: " + overwritingFileErr.Error())
+	}
+
+	return nil
+}
+
+func convertToDosToJson(toDos []models.ToDoItem) []byte {
+	jsonData, err := json.Marshal(toDos)
+	if err != nil {
+		return []byte("Error converting to JSON: " + err.Error())
+	}
+	return jsonData
 }

@@ -3,6 +3,7 @@ package engine
 import (
 	"os"
 	"testing"
+	"todoapp/models"
 )
 
 func TestCreateTheToDoListFileIfNeeded(t *testing.T) {
@@ -54,7 +55,7 @@ func TestWriteAndReadExistingList(t *testing.T) {
 		t.Fatalf("Expected no error, got %v", err)
 	}
 
-	item := toDoItem{id: 1, name: "Test", description: "Test description"}
+	item := models.ToDoItem{Id: 1, Name: "Test", Description: "Test description"}
 	err = writeItemToFile(item)
 	if err != nil {
 		t.Fatalf("Expected no error, got %v", err)
@@ -69,7 +70,7 @@ func TestWriteAndReadExistingList(t *testing.T) {
 		t.Fatalf("Expected list length to be 1, got %d", len(list))
 	}
 
-	if list[0].name != "Test" || list[0].description != "Test description" {
+	if list[0].Name != "Test" || list[0].Description != "Test description" {
 		t.Fatalf("Expected item to match, got %+v", list[0])
 	}
 }

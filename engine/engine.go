@@ -2,7 +2,6 @@ package engine
 
 import (
 	"bufio"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -222,13 +221,12 @@ func (e *engine) ExecuteCommand(arguments []string) error {
 	return nil
 }
 
-func (e *engine) GetItems() ([]byte, error) {
+func (e *engine) GetItems() ([]models.ToDoItem, error) {
 	toDos, err := readExistingList()
 	if err != nil {
 		return nil, errors.New("Error reading existing list: " + err.Error())
 	}
-	toDosString := convertToDosToJson(toDos)
-	return toDosString, nil
+	return toDos, nil
 }
 
 func (e *engine) CreateItem(name string, description string) error {
@@ -296,12 +294,4 @@ func (e *engine) DeleteItem(id int) error {
 	}
 
 	return nil
-}
-
-func convertToDosToJson(toDos []models.ToDoItem) []byte {
-	jsonData, err := json.Marshal(toDos)
-	if err != nil {
-		return []byte("Error converting to JSON: " + err.Error())
-	}
-	return jsonData
 }

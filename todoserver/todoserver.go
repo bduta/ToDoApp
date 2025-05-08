@@ -92,7 +92,9 @@ func (t *ToDoServer) getHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write(toDosJson)
+	if err := json.NewEncoder(w).Encode(toDosJson); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }
 
 func (t *ToDoServer) updateHandler(w http.ResponseWriter, r *http.Request) {
